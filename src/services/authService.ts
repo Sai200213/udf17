@@ -25,6 +25,11 @@ import { clearFileSession } from '../utils/fileSessionStore';
  */
 const stampAdminClaims = async (firebaseUser: FirebaseUser): Promise<void> => {
     try {
+        const tokenResult = await firebaseUser.getIdTokenResult();
+        if (tokenResult.claims && tokenResult.claims.isAdmin === true) {
+            log.log('[authService] Admin claims already present in token.');
+            return;
+        }
         const setClaimsFn = httpsCallable(functions, 'setAdminClaims');
         await setClaimsFn({});
         // Force-refresh the token so new claims are available immediately
