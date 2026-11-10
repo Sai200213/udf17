@@ -51,8 +51,8 @@ const AdminLoginPage: React.FC<AdminLoginPageProps> = (props) => {
                 </div>
                 <form className="mt-8 space-y-6" onSubmit={props.onLoginSubmit}>
                     <div className="rounded-md shadow-sm -space-y-px">
-                        <Input type="text" value={props.adminUsername} onChange={(e) => props.setAdminUsername(e.target.value)} placeholder="Username or Email" required className="rounded-t-md" />
-                        <Input type="password" value={props.adminPassword} onChange={(e) => props.setAdminPassword(e.target.value)} placeholder="Password" required className="rounded-b-md" />
+                        <Input type="text" value={props.adminUsername} onChange={(e) => props.setAdminUsername(e.target.value)} placeholder="Username or Email" autoComplete="username" required className="rounded-t-md" />
+                        <Input type="password" value={props.adminPassword} onChange={(e) => props.setAdminPassword(e.target.value)} placeholder="Password" autoComplete="current-password" required className="rounded-b-md" />
                     </div>
                     {props.loginError && <div className="text-red-500 text-sm text-center p-2 bg-red-50 rounded-md">{props.loginError}</div>}
                     <Button type="submit" variant="primary" className="w-full bg-blue-600 hover:bg-blue-700 text-white" size="lg" disabled={props.isLoading}>

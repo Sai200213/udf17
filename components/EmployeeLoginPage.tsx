@@ -460,7 +460,7 @@ const EmployeeLoginPage: React.FC<EmployeeLoginPageProps> = ({
                   className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   placeholder="e.g. HY123456"
                   autoCapitalize="none"
-                  autoComplete="off"
+                  autoComplete="username"
                   required
                 />
               </div>
@@ -475,6 +475,7 @@ const EmployeeLoginPage: React.FC<EmployeeLoginPageProps> = ({
                   onChange={(e) => setPassword(e.target.value)}
                   className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   placeholder="••••••••"
+                  autoComplete="current-password"
                   required
                 />
                 <div className="text-right mt-1.5">

@@ -3798,16 +3798,50 @@ const computeAndApplyUserClaims = async (uid, resolvedDocId = null, explicitDoc 
         ...Object.keys(permissionOverrides).filter(p => permissionOverrides[p] === true)
     ])];
 
-    const claims = {
+    // Master permission set checked by firestore.rules
+    // Keeping only rules-relevant permissions prevents breaching Google's 1,000-byte custom claims limit
+    const FIRESTORE_RULES_PERMS = new Set([
+        'EMPLOYEES_VIEW_SCOPE_ALL', 'SUBMISSIONS_VIEW_SCOPE_ALL', 'LEAVES_VIEW_SCOPE_ALL',
+        'ACCOUNT_UPDATES_VIEW_SCOPE_ALL', 'RESIGNATIONS_VIEW_SCOPE_ALL', 'DISCIPLINE_VIEW_SCOPE_ALL',
+        'MANAGE_SITES', 'MANAGE_ALL_SITES', 'SITES_MANAGE', 'SITES_EDIT_INFO', 'SITES_DELETE',
+        'SUBMISSIONS_APPROVE', 'DELETE_SUBMISSION', 'DELETE_EMPLOYEE', 'EMPLOYEES_IMPORT',
+        'EMPLOYEES_MANAGE_DEPLOYMENTS', 'EMPLOYEES_MANAGE_CLIENT_IDS', 'EMPLOYEES_REQUEST_CORRECTION',
+        'EMPLOYEES_MARK_PROFILE_COMPLETE', 'EMPLOYEES_TAB_RECYCLE_BIN', 'LEAVES_APPROVE', 'LEAVES_DELETE',
+        'MANAGE_LEAVE_TYPES', 'ACCOUNT_UPDATES_APPROVE', 'ACCOUNT_UPDATES_DELETE', 'RESIGNATIONS_APPROVE',
+        'RESIGNATIONS_DELETE', 'MANAGE_SYSTEM', 'MANAGE_WORKFLOWS', 'MANAGE_FORMS', 'MANAGE_FORM_SECTIONS',
+        'VIEW_AUDIT_LOGS', 'BGV_VIEW', 'BGV_VIEW_DOSSIER', 'BGV_MANAGE', 'BGV_DISPATCH_VENDOR',
+        'BGV_UPLOAD_CERTIFICATE', 'BGV_APPROVE_REJECT', 'BGV_VENDOR', 'BGV_CONFIGURE_FIELDS',
+        'INVITES_CREATE', 'INVITES_MANAGE', 'INVITES_EDIT', 'INVITES_REACTIVATE', 'INVITES_DELETE',
+        'INVITES_VIEW_ALL', 'VACANCIES_MANAGE', 'DISCIPLINE_MANAGE', 'DISCIPLINE_CREATE',
+        'DISCIPLINE_ISSUE', 'DISCIPLINE_DELETE', 'GAMIFICATION_MANAGE'
+    ]);
+
+    // SuperAdmin already bypasses all rules (isSuperAdmin: true), so permissions array can be empty in claims
+    const rulePermissions = isSuperAdmin 
+        ? [] 
+        : finalPermissions.filter(p => FIRESTORE_RULES_PERMS.has(p));
+
+    let claims = {
         isAdmin: true,
         isSuperAdmin,
         roleId,
-        sitesManaged,
-        permissions: finalPermissions
+        sitesManaged: (sitesManaged || []).slice(0, 20),
+        permissions: rulePermissions
     };
 
-    await admin.auth().setCustomUserClaims(uid, claims);
-    console.log(`[AUTH CLAIMS] Stamped claims for uid=${uid}, role=${roleId}, isSuperAdmin=${isSuperAdmin}`);
+    // Strict safety cap: If payload ever approaches 900 bytes, prune permissions safely
+    while (JSON.stringify(claims).length > 900 && claims.permissions.length > 0) {
+        claims.permissions.pop();
+    }
+
+    try {
+        await admin.auth().setCustomUserClaims(uid, claims);
+        console.log(`[AUTH CLAIMS] Stamped claims (${JSON.stringify(claims).length} bytes) for uid=${uid}, role=${roleId}, isSuperAdmin=${isSuperAdmin}`);
+    } catch (claimsErr) {
+        console.error('[AUTH CLAIMS] setCustomUserClaims failed, attempting minimal fallback:', claimsErr);
+        const minimalClaims = { isAdmin: true, isSuperAdmin, roleId };
+        await admin.auth().setCustomUserClaims(uid, minimalClaims).catch(e => console.error('[AUTH CLAIMS] Minimal fallback failed:', e));
+    }
     return { success: true, isAdmin: true, isSuperAdmin, roleId, sitesManaged, permissions: finalPermissions };
 };
 
